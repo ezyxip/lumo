@@ -1,0 +1,29 @@
+# Go (будущий компилятор lumo)
+bin/
+dist/
+*.exe
+*.out
+*.test
+/vendor/
+
+# C (сгенерированный код и сборки)
+*.o
+*.a
+*.so
+/build/
+generated/
+
+# Python (classic-solver, uv)
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# Env / OS / IDE
+.env
+.idea/
+.vscode/
+*.swp
+.DS_Store
