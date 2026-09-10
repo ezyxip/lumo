@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ColumnConfig — вход компилятора (Level 1)",
+  "type": "object",
+  "required": ["name", "components", "thermo", "column"],
+  "properties": {
+    "name": { "type": "string", "description": "идентификатор примера" },
+    "description": { "type": "string" },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string" },
+        "pages": { "type": "string" }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["name", "M", "antoine"],
+        "properties": {
+          "name": { "type": "string" },
+          "M": { "type": "number", "description": "молярная масса, г/моль" },
+          "antoine": {
+            "type": "object",
+            "required": ["A", "B", "C"],
+            "properties": {
+              "A": { "type": "number" },
+              "B": { "type": "number" },
+              "C": { "type": "number" },
+              "P_units": { "type": "string", "default": "mmHg" },
+              "T_units": { "type": "string", "default": "C" },
+              "equation": { "type": "string", "default": "log10(P)=A-B/(C+t)" }
+            }
+          },
+          "T_boil_C_at_P": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "thermo": {
+      "type": "object",
+      "required": ["model"],
+      "properties": {
+        "model": { "type": "string", "enum": ["antoine_raoult"] },
+        "P_units": { "type": "string" },
+        "T_units": { "type": "string" }
+      }
+    },
+    "column": {
+      "type": "object",
+      "required": ["N", "condenser", "reboiler", "pressure_MPa"],
+      "properties": {
+        "N": { "type": "integer", "minimum": 3, "description": "теоретических ступеней включая condenser+reboiler" },
+        "condenser": { "type": "string", "enum": ["total", "partial"] },
+        "reboiler": { "type": "string", "enum": ["kettle", "thermosiphon"] },
+        "feed_stages": { "type": "array", "items": { "type": "integer" } },
+        "side_draws": { "type": "array", "items": { "type": "object" } },
+        "pressure_MPa": { "type": "number" },
+        "pressure_profile": { "type": "string", "enum": ["const", "linear_drop"], "default": "const" }
+      }
+    }
+  }
+}

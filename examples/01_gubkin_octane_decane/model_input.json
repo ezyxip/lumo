@@ -1,0 +1,21 @@
+{
+  "feed": {
+    "F": 12000,
+    "F_units": "kg_h",
+    "basis": "mass",
+    "z_light": 0.4,
+    "e": 0.2,
+    "q": 0.8,
+    "tF_C": 154.8,
+    "P_MPa": 0.12
+  },
+  "specs": {
+    "yD": 0.98,
+    "xW": 0.01,
+    "yD_basis": "mass",
+    "xW_basis": "mass",
+    "R": null,
+    "D": null
+  },
+  "initial_guess": { "profile": "linear_T_x" }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OperatingParams — вход модели (Level 2)",
+  "type": "object",
+  "required": ["feed", "specs"],
+  "properties": {
+    "feed": {
+      "type": "object",
+      "required": ["F", "basis", "z_light"],
+      "properties": {
+        "F": { "type": "number", "description": "расход сырья, кг/ч или моль/ч в зависимости от F_units" },
+        "F_units": { "type": "string", "enum": ["kg_h", "kmol_h", "mol_s"], "default": "kg_h" },
+        "basis": { "type": "string", "enum": ["mass", "mole"], "description": "в каких долях задан z" },
+        "z_light": { "type": "number", "minimum": 0, "maximum": 1, "description": "доля НКК в сырье" },
+        "e": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "доля отгона, e=(xF-xF*)/(yF*-xF*)" },
+        "q": { "type": ["number", "null"], "description": "доля жидкости в сырье, q=1-e" },
+        "tF_C": { "type": ["number", "null"] },
+        "P_MPa": { "type": ["number", "null"] }
+      }
+    },
+    "specs": {
+      "type": "object",
+      "properties": {
+        "yD": { "type": ["number", "null"], "description": "доля НКК в дистилляте" },
+        "xW": { "type": ["number", "null"], "description": "доля НКК в кубе" },
+        "yD_basis": { "type": "string", "enum": ["mass", "mole"], "default": "mass" },
+        "xW_basis": { "type": "string", "enum": ["mass", "mole"], "default": "mass" },
+        "R": { "type": ["number", "null"], "description": "флегмовое число L/D" },
+        "D": { "type": ["number", "null"], "description": "отбор дистиллята, те же единицы что F" },
+        "reflux_basis": { "type": "string" }
+      }
+    },
+    "initial_guess": {
+      "type": "object",
+      "properties": {
+        "profile": { "type": "string", "enum": ["linear_T_x", "fenske"], "default": "linear_T_x" }
+      }
+    }
+  }
+}

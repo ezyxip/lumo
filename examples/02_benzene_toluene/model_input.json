@@ -1,0 +1,21 @@
+{
+  "feed": {
+    "F": 100,
+    "F_units": "kmol_h",
+    "basis": "mole",
+    "z_light": 0.5,
+    "e": null,
+    "q": 1.0,
+    "tF_C": null,
+    "P_MPa": 0.101325
+  },
+  "specs": {
+    "yD": 0.95,
+    "xW": 0.05,
+    "yD_basis": "mole",
+    "xW_basis": "mole",
+    "R": 2.5,
+    "D": null
+  },
+  "initial_guess": { "profile": "linear_T_x" }
+}

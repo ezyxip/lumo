@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Results — выход модели (Level 2)",
+  "type": "object",
+  "required": ["provenance"],
+  "properties": {
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "solver": { "type": "string" },
+        "compiler_input": { "type": "string" },
+        "model_input": { "type": "string" }
+      }
+    },
+    "products": {
+      "type": "object",
+      "properties": {
+        "D": { "type": ["number", "null"] },
+        "W": { "type": ["number", "null"] },
+        "D_units": { "type": "string" },
+        "yD": { "type": ["number", "null"] },
+        "xW": { "type": ["number", "null"] },
+        "Qd": { "type": ["number", "null"] },
+        "Qw": { "type": ["number", "null"] },
+        "Q_units": { "type": "string" }
+      }
+    },
+    "profiles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["stage", "T_C"],
+        "properties": {
+          "stage": { "type": "integer" },
+          "T_C": { "type": "number" },
+          "x": { "type": "number" },
+          "y": { "type": "number" },
+          "x_basis": { "type": "string" },
+          "L": { "type": ["number", "null"] },
+          "V": { "type": ["number", "null"] }
+        }
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "properties": {
+        "converged": { "type": "boolean" },
+        "iterations": { "type": "integer" },
+        "residual_norm": { "type": "number" },
+        "mass_balance_error": { "type": "number" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "properties": {
+        "reference_table": { "type": "string" },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

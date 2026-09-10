@@ -1,0 +1,32 @@
+{
+  "name": "03_synthetic_wide_boiling",
+  "description": "Бензол/толуол N=20 для теста масштабирования (same mixture as 02, larger N).",
+  "provenance": {
+    "source": "synthetic, для стресс-теста",
+    "pages": "-"
+  },
+  "components": [
+    {
+      "name": "benzene",
+      "M": 78.11,
+      "antoine": { "A": 6.90565, "B": 1211.033, "C": 220.79, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
+      "T_boil_C_at_P": 80.1
+    },
+    {
+      "name": "toluene",
+      "M": 92.14,
+      "antoine": { "A": 6.95464, "B": 1344.8, "C": 219.48, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
+      "T_boil_C_at_P": 110.6
+    }
+  ],
+  "thermo": { "model": "antoine_raoult", "P_units": "mmHg", "T_units": "C" },
+  "column": {
+    "N": 20,
+    "condenser": "total",
+    "reboiler": "kettle",
+    "feed_stages": [10],
+    "side_draws": [],
+    "pressure_MPa": 0.12,
+    "pressure_profile": "const"
+  }
+}
