@@ -1,29 +1,12 @@
 package topology
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
 
-// mustLoadFixture читает fixture из testdata (копия examples/02_benzene_toluene),
-// чтобы тесты не зависели от путей вне пакета.
-func mustLoadFixture(t *testing.T) Config {
-	t.Helper()
-	f, err := os.Open("testdata/02_benzene_toluene.json")
-	if err != nil {
-		t.Fatalf("open fixture: %v", err)
-	}
-	defer f.Close()
-	c, err := Parse(f)
-	if err != nil {
-		t.Fatalf("Parse(fixture): %v", err)
-	}
-	return c
-}
-
 func TestParseFixture(t *testing.T) {
-	c := mustLoadFixture(t)
+	c := mustLoadFixture(t, "testdata/02_benzene_toluene.json")
 
 	if c.Name != "02_benzene_toluene" {
 		t.Errorf("Name = %q, want %q", c.Name, "02_benzene_toluene")
