@@ -3,9 +3,11 @@
   "title": "Results — выход модели (Level 2)",
   "type": "object",
   "required": ["provenance"],
+  "additionalProperties": false,
   "properties": {
     "provenance": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "solver": { "type": "string" },
         "compiler_input": { "type": "string" },
@@ -14,14 +16,19 @@
     },
     "products": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
-        "D": { "type": ["number", "null"] },
-        "W": { "type": ["number", "null"] },
+        "D": { "type": ["number", "null"], "description": "отбор дистиллята, в единицах D_units" },
+        "W": { "type": ["number", "null"], "description": "отбор куба, в единицах D_units" },
         "D_units": { "type": "string" },
-        "yD": { "type": ["number", "null"] },
-        "xW": { "type": ["number", "null"] },
-        "Qd": { "type": ["number", "null"] },
-        "Qw": { "type": ["number", "null"] },
+        "D_mass_kg_h": { "type": ["number", "null"], "description": "отбор дистиллята в кг/ч, для сверки с методичками в массовом базисе" },
+        "W_mass_kg_h": { "type": ["number", "null"], "description": "отбор куба в кг/ч" },
+        "yD": { "type": ["number", "null"], "description": "доля НКК в дистилляте, мольная" },
+        "yD_mass": { "type": ["number", "null"], "description": "доля НКК в дистилляте, массовая" },
+        "xW": { "type": ["number", "null"], "description": "доля НКК в кубе, мольная" },
+        "xW_mass": { "type": ["number", "null"], "description": "доля НКК в кубе, массовая" },
+        "Qd": { "type": ["number", "null"], "description": "тепловая нагрузка конденсатора; null, если модель не считает энтальпии (CMO)" },
+        "Qw": { "type": ["number", "null"], "description": "тепловая нагрузка кипятильника; null, если модель не считает энтальпии (CMO)" },
         "Q_units": { "type": "string" }
       }
     },
@@ -30,11 +37,14 @@
       "items": {
         "type": "object",
         "required": ["stage", "T_C"],
+        "additionalProperties": false,
         "properties": {
           "stage": { "type": "integer" },
           "T_C": { "type": "number" },
-          "x": { "type": "number" },
-          "y": { "type": "number" },
+          "x": { "type": "number", "description": "мольная доля НКК в жидкости" },
+          "y": { "type": "number", "description": "мольная доля НКК в паре" },
+          "x_mass": { "type": "number", "description": "массовая доля НКК в жидкости" },
+          "y_mass": { "type": "number", "description": "массовая доля НКК в паре" },
           "x_basis": { "type": "string" },
           "L": { "type": ["number", "null"] },
           "V": { "type": ["number", "null"] }
@@ -43,15 +53,26 @@
     },
     "diagnostics": {
       "type": "object",
+      "required": ["converged", "iterations", "residual_norm", "mass_balance_error"],
+      "additionalProperties": false,
       "properties": {
         "converged": { "type": "boolean" },
         "iterations": { "type": "integer" },
         "residual_norm": { "type": "number" },
-        "mass_balance_error": { "type": "number" }
+        "mass_balance_error": {
+          "type": "number",
+          "description": "|D+W-F| относительно F, обязано быть реально посчитано (не null) — санити-чек баланса масс"
+        },
+        "res_history": {
+          "type": "array",
+          "items": { "type": "number" },
+          "description": "норма невязки по итерациям Ньютона; нужно для сравнения числа итераций между конфигурациями (V1-V3)"
+        }
       }
     },
     "validation": {
       "type": "object",
+      "additionalProperties": false,
       "properties": {
         "reference_table": { "type": "string" },
         "notes": { "type": "string" }
