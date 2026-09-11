@@ -1,0 +1,32 @@
+{
+  "name": "01_gubkin_octane_decane",
+  "description": "Губкин, Прокофьева и др. 2016, ректификация н-октан/н-декан. Бинарная, Antoine+Raoult, P=const.",
+  "provenance": {
+    "source": "doc/theory/Tekhnol_rasch_rektif_kolon_binar_smes.pdf",
+    "pages": "4-10, табл.1-3"
+  },
+  "components": [
+    {
+      "name": "n-octane",
+      "M": 114.2,
+      "antoine": { "A": 6.9238, "B": 1355.13, "C": 209.52, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
+      "T_boil_C_at_P": 131.9
+    },
+    {
+      "name": "n-decane",
+      "M": 142.2,
+      "antoine": { "A": 6.9537, "B": 1501.27, "C": 194.48, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
+      "T_boil_C_at_P": 180.9
+    }
+  ],
+  "thermo": { "model": "antoine_raoult", "P_units": "mmHg", "T_units": "C" },
+  "column": {
+    "N": 13,
+    "condenser": "total",
+    "reboiler": "kettle",
+    "feed_stages": [6],
+    "side_draws": [],
+    "pressure_MPa": 0.12,
+    "pressure_profile": "const"
+  }
+}
