@@ -1,0 +1,32 @@
+{
+  "name": "02_benzene_toluene",
+  "description": "Канонический идеальный пример бензол/толуол, P=1 атм, для кросс-чека с Raoult. Константы из NIST/BCCampus.",
+  "provenance": {
+    "source": "pressbooks.bccampus.ca/chbe220, NIST Antoine",
+    "pages": "Txy benzene-toluene 1 atm"
+  },
+  "components": [
+    {
+      "name": "benzene",
+      "M": 78.11,
+      "antoine": { "A": 6.90565, "B": 1211.033, "C": 220.79, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
+      "T_boil_C_at_P": 80.1
+    },
+    {
+      "name": "toluene",
+      "M": 92.14,
+      "antoine": { "A": 6.95464, "B": 1344.8, "C": 219.48, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
+      "T_boil_C_at_P": 110.6
+    }
+  ],
+  "thermo": { "model": "antoine_raoult", "P_units": "mmHg", "T_units": "C" },
+  "column": {
+    "N": 10,
+    "condenser": "total",
+    "reboiler": "kettle",
+    "feed_stages": [5],
+    "side_draws": [],
+    "pressure_MPa": 0.101325,
+    "pressure_profile": "const"
+  }
+}
