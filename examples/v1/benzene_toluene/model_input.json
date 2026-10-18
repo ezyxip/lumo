@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "feeds": {
+    "main_feed": {
+      "flow": {
+        "value": 100,
+        "unit": "kmol_h"
+      },
+      "composition": {
+        "basis": "mole",
+        "fractions": {
+          "benzene": 0.5,
+          "toluene": 0.5
+        }
+      },
+      "state": {
+        "type": "saturated_liquid"
+      }
+    }
+  },
+  "specifications": {
+    "type": "rating",
+    "distillate_flow": {
+      "value": 50,
+      "unit": "kmol_h"
+    },
+    "reflux_ratio": {
+      "value": 2.5,
+      "basis": "mole"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "name": "benzene_toluene",
+  "description": "Пример контракта v1. Требует справочника свойств; не является исполняемым кейсом или эталоном.",
+  "components": [
+    {
+      "id": "benzene",
+      "name": "Бензол",
+      "molar_mass_g_mol": 78.11,
+      "properties": {
+        "source": "builtin",
+        "key": "benzene",
+        "revision": "example-v1"
+      }
+    },
+    {
+      "id": "toluene",
+      "name": "Толуол",
+      "molar_mass_g_mol": 92.14,
+      "properties": {
+        "source": "builtin",
+        "key": "toluene",
+        "revision": "example-v1"
+      }
+    }
+  ],
+  "thermo": {
+    "phase_equilibrium": "antoine_raoult",
+    "enthalpy": "ideal"
+  },
+  "column": {
+    "stages": 10,
+    "condenser": {
+      "type": "total"
+    },
+    "reboiler": {
+      "type": "equilibrium"
+    },
+    "pressure": {
+      "type": "constant",
+      "value_Pa": 101325
+    },
+    "feeds": [
+      {
+        "id": "main_feed",
+        "stage": 5
+      }
+    ]
+  }
+}

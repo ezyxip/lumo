@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lumo v1 — model input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "feeds",
+    "specifications"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "feeds": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "flow",
+          "composition",
+          "state"
+        ],
+        "properties": {
+          "flow": {
+            "$ref": "#/$defs/flow"
+          },
+          "composition": {
+            "$ref": "#/$defs/composition"
+          },
+          "state": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "saturated_liquid"
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "temperature_K"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "temperature"
+                  },
+                  "temperature_K": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "type",
+                  "vapor_fraction"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "vapor_fraction"
+                  },
+                  "vapor_fraction": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              }
+            ],
+            "description": "Состояние при давлении ступени подачи. vapor_fraction — мольная доля пара в общем расходе; это не параметр q."
+          }
+        }
+      }
+    },
+    "specifications": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "distillate_flow",
+        "reflux_ratio"
+      ],
+      "properties": {
+        "type": {
+          "const": "rating"
+        },
+        "distillate_flow": {
+          "$ref": "#/$defs/flow"
+        },
+        "reflux_ratio": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "basis"
+          ],
+          "properties": {
+            "value": {
+              "type": "number",
+              "minimum": 0
+            },
+            "basis": {
+              "const": "mole"
+            }
+          }
+        }
+      }
+    },
+    "initial_guess": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile"
+      ],
+      "properties": {
+        "profile": {
+          "const": "linear_T_x"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "flow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "unit"
+      ],
+      "properties": {
+        "value": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "unit": {
+          "type": "string",
+          "enum": [
+            "mol_s",
+            "kmol_h",
+            "kg_h"
+          ]
+        }
+      }
+    },
+    "composition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "basis",
+        "fractions"
+      ],
+      "properties": {
+        "basis": {
+          "type": "string",
+          "enum": [
+            "mole",
+            "mass"
+          ]
+        },
+        "fractions": {
+          "type": "object",
+          "minProperties": 2,
+          "propertyNames": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  }
+}

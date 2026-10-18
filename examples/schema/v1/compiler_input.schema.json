@@ -1,0 +1,286 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lumo v1 — compiler input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "components",
+    "thermo",
+    "column"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "properties": {
+        "source": {
+          "type": "string"
+        },
+        "pages": {
+          "type": "string"
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "molar_mass_g_mol",
+          "properties"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "molar_mass_g_mol": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "properties": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "source",
+                  "key",
+                  "revision"
+                ],
+                "properties": {
+                  "source": {
+                    "const": "builtin"
+                  },
+                  "key": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "revision": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "source",
+                  "antoine",
+                  "enthalpy",
+                  "temperature_range_K"
+                ],
+                "properties": {
+                  "source": {
+                    "const": "inline"
+                  },
+                  "antoine": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "A",
+                      "B",
+                      "C",
+                      "pressure_unit",
+                      "temperature_unit"
+                    ],
+                    "properties": {
+                      "A": {
+                        "type": "number"
+                      },
+                      "B": {
+                        "type": "number"
+                      },
+                      "C": {
+                        "type": "number"
+                      },
+                      "pressure_unit": {
+                        "const": "mmHg"
+                      },
+                      "temperature_unit": {
+                        "const": "C"
+                      }
+                    },
+                    "description": "log10(Psat/mmHg) = A - B/(C + t_C). Допустимые температуры задаются temperature_range_K."
+                  },
+                  "enthalpy": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "type",
+                      "reference_temperature_K",
+                      "liquid_cp_J_mol_K",
+                      "vapor_cp_J_mol_K",
+                      "vaporization_enthalpy_at_reference_J_mol"
+                    ],
+                    "properties": {
+                      "type": {
+                        "const": "constant_cp"
+                      },
+                      "reference_temperature_K": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "liquid_cp_J_mol_K": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "vapor_cp_J_mol_K": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "vaporization_enthalpy_at_reference_J_mol": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    },
+                    "description": "hL=CpL*(T-Tref); hV=deltaHvap_ref+CpV*(T-Tref), Дж/моль. Ноль hL при Tref."
+                  },
+                  "temperature_range_K": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "min",
+                      "max"
+                    ],
+                    "properties": {
+                      "min": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "max": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "description": "builtin — ссылка на версионированный справочник (пока не реализован); inline — явные параметры."
+          }
+        }
+      }
+    },
+    "thermo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "phase_equilibrium",
+        "enthalpy"
+      ],
+      "properties": {
+        "phase_equilibrium": {
+          "const": "antoine_raoult"
+        },
+        "enthalpy": {
+          "const": "ideal"
+        }
+      }
+    },
+    "column": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stages",
+        "condenser",
+        "reboiler",
+        "pressure",
+        "feeds"
+      ],
+      "properties": {
+        "stages": {
+          "type": "integer",
+          "minimum": 3,
+          "description": "1-based, сверху вниз; 1 — конденсатор, N — кипятильник; оба включены в stages."
+        },
+        "condenser": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "total"
+            }
+          }
+        },
+        "reboiler": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type"
+          ],
+          "properties": {
+            "type": {
+              "const": "equilibrium"
+            }
+          }
+        },
+        "pressure": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "type",
+            "value_Pa"
+          ],
+          "properties": {
+            "type": {
+              "const": "constant"
+            },
+            "value_Pa": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "feeds": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "stage"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+              },
+              "stage": {
+                "type": "integer",
+                "minimum": 2
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

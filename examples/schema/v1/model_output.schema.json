@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lumo v1 — model output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "provenance",
+    "diagnostics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1,
+      "type": "integer"
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "solver",
+        "compiler_input",
+        "model_input"
+      ],
+      "properties": {
+        "solver": {
+          "type": "string",
+          "minLength": 1
+        },
+        "compiler_input": {
+          "type": "string",
+          "minLength": 1
+        },
+        "model_input": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "products": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distillate",
+        "bottoms",
+        "condenser_duty_W",
+        "reboiler_duty_W"
+      ],
+      "properties": {
+        "distillate": {
+          "$ref": "#/$defs/stream"
+        },
+        "bottoms": {
+          "$ref": "#/$defs/stream"
+        },
+        "condenser_duty_W": {
+          "type": "number",
+          "minimum": 0
+        },
+        "reboiler_duty_W": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "description": "Положительные величины отвода тепла в конденсаторе и подвода в кипятильнике."
+    },
+    "profiles": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stage",
+          "temperature_K",
+          "liquid",
+          "vapor"
+        ],
+        "properties": {
+          "stage": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "temperature_K": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "liquid": {
+            "$ref": "#/$defs/stream"
+          },
+          "vapor": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/stream"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "description": "liquid: поток вниз (на последней ступени — кубовый продукт); vapor: поток вверх, null на полном конденсаторе. Дистиллят не включён в liquid на ступени 1."
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "converged",
+        "iterations",
+        "residual_norm"
+      ],
+      "properties": {
+        "converged": {
+          "type": "boolean"
+        },
+        "iterations": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "residual_norm": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mass_balance_error": {
+          "type": "number",
+          "minimum": 0,
+          "description": "abs(D+B-sum(F))/sum(F), все расходы в моль/с."
+        },
+        "residual_history": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          }
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "diagnostics": {
+            "properties": {
+              "converged": {
+                "const": true
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "products",
+          "profiles"
+        ],
+        "properties": {
+          "diagnostics": {
+            "required": [
+              "mass_balance_error"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "fractions": {
+      "type": "object",
+      "minProperties": 2,
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[A-Za-z][A-Za-z0-9_-]*$"
+      },
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    },
+    "stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "flow_mol_s",
+        "mole_fractions"
+      ],
+      "properties": {
+        "flow_mol_s": {
+          "type": "number",
+          "minimum": 0
+        },
+        "mole_fractions": {
+          "$ref": "#/$defs/fractions"
+        }
+      }
+    }
+  }
+}
