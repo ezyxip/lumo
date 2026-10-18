@@ -135,3 +135,42 @@ func TestGenerateMultipleComponents(t *testing.T) {
 		t.Fatal("component count was not specialized")
 	}
 }
+
+func TestVaporizationEnthalpyRange(t *testing.T) {
+	for _, tc := range []struct {
+		name                      string
+		liquidCP, vaporCP, latent float64
+		valid                     bool
+	}{
+		{"negative at upper endpoint", 140, 90, 1000, false},
+		{"negative at lower endpoint", 90, 150, 1000, false},
+		{"zero at upper endpoint", 140, 120, 1000, false},
+		{"zero at lower endpoint", 90, 140, 1000, false},
+		{"overflow", 1, math.MaxFloat64, 1000, false},
+		{"positive decreasing", 140, 90, 3000, true},
+		{"positive increasing", 90, 150, 2000, true},
+		{"constant", 100, 100, 1000, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := testConfig()
+			h := cfg.Components[0].Properties.Enthalpy
+			h.ReferenceTemperatureK = 350
+			h.LiquidCPJMolK, h.VaporCPJMolK = tc.liquidCP, tc.vaporCP
+			h.VaporizationEnthalpyAtReferenceJMol = tc.latent
+			cfg.Components[0].Properties.TemperatureRangeK = &contractv1.TemperatureRange{Min: 330, Max: 400}
+			files, err := Generate(cfg)
+			if tc.valid {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if err == nil || !strings.Contains(err.Error(), "vaporization enthalpy must be finite and positive throughout") {
+					t.Fatalf("expected vaporization enthalpy range error, got %v", err)
+				}
+				if len(files.Header) != 0 || len(files.Source) != 0 {
+					t.Fatal("invalid parameters produced code")
+				}
+			}
+		})
+	}
+}

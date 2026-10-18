@@ -64,6 +64,7 @@ uv run pytest -q
 
 ## Структура репозитория
 
+- `codegen/mesh/` — генератор C99 для функции невязок колонны
 - `codegen/thermo/` — генератор C99 для Antoine + Raoult и идеальных энтальпий
 - `contracts/v1/` — Go-типы нового контракта входов и результатов
 - `topology/` — парсер и валидатор прежнего формата
@@ -80,6 +81,7 @@ uv run pytest -q
 - [doc/scope.md](doc/scope.md) — концептуальная постановка задачи, минимальный скоуп и границы ответственности
 - [examples/v1/README.md](examples/v1/README.md) — новый контракт JSON v1 и правила его проверки
 - [codegen/thermo/README.md](codegen/thermo/README.md) — генерация термодинамики и общий интерфейс для MESH
+- [codegen/mesh/README.md](codegen/mesh/README.md) — генерация невязок MESH, раскладка вектора и референсы
 - [doc/problem.md](doc/problem.md) — формальная MESH-постановка, Rating vs Design
 - [doc/thesis_features_full.md](doc/thesis_features_full.md) — тезисы: факторы, метрики, методология
 - [doc/roadmap.md](doc/roadmap.md) — дорожная карта V0–V5+

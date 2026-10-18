@@ -10,13 +10,13 @@
       "name": "benzene",
       "M": 78.11,
       "antoine": { "A": 6.90565, "B": 1211.033, "C": 220.79, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
-      "T_boil_C_at_P": 80.1
+      "T_boil_C_at_P": 85.69
     },
     {
       "name": "toluene",
       "M": 92.14,
       "antoine": { "A": 6.95464, "B": 1344.8, "C": 219.48, "P_units": "mmHg", "T_units": "C", "equation": "log10(P)=A-B/(C+t)" },
-      "T_boil_C_at_P": 110.6
+      "T_boil_C_at_P": 116.69
     }
   ],
   "thermo": { "model": "antoine_raoult", "P_units": "mmHg", "T_units": "C" },

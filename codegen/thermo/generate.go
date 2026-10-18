@@ -118,6 +118,15 @@ func validateComponents(components []contractv1.Component) error {
 		if r.Min <= 0 || r.Min >= r.Max || h.ReferenceTemperatureK < r.Min || h.ReferenceTemperatureK > r.Max {
 			return fmt.Errorf("%s.temperature_range_K: require 0 < min < max and reference temperature inside range", path)
 		}
+		// The phase enthalpy difference is affine in T, so checking both
+		// endpoints covers the entire declared correlation interval.
+		for _, temperature := range []float64{r.Min, r.Max} {
+			latent := h.VaporizationEnthalpyAtReferenceJMol +
+				(h.VaporCPJMolK-h.LiquidCPJMolK)*(temperature-h.ReferenceTemperatureK)
+			if !finite(latent) || latent <= 0 {
+				return fmt.Errorf("%s.enthalpy: vaporization enthalpy must be finite and positive throughout temperature_range_K (T=%g K, deltaH=%g J/mol)", path, temperature, latent)
+			}
+		}
 		// Do not require positive Antoine coefficients: their signs depend on
 		// the fitted correlation. Only its pole must be outside the range.
 		pole := 273.15 - a.C
