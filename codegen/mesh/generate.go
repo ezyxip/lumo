@@ -1,4 +1,4 @@
-// Package mesh generates the residual of a steady-state ideal column.
+// Package mesh generates residuals and numerical Jacobians of a steady-state ideal column.
 package mesh
 
 import (
@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"text/template"
 
+	"github.com/ezyxip/lumo/codegen/jacobian"
 	"github.com/ezyxip/lumo/codegen/thermo"
 	contractv1 "github.com/ezyxip/lumo/contracts/v1"
 )
@@ -20,13 +21,18 @@ var headerTemplate string
 //go:embed templates/mesh.c.tmpl
 var sourceTemplate string
 
-// Files contains the complete C99 residual module and its thermodynamics.
-// Write Header/Source as lumo_mesh.h/.c and Thermo as lumo_thermo.h/.c.
+//go:embed templates/jacobian.c.tmpl
+var jacobianTemplate string
+
+// Files contains the complete C99 residual and Jacobian module and its thermodynamics.
+// Write Header/Source as lumo_mesh.h/.c, Thermo as lumo_thermo.h/.c,
+// and Jacobian as lumo_jacobian.h/.c.
 // FeedIDs and Thermo.ComponentIDs define the order of C input arrays.
 type Files struct {
 	Header    []byte
 	Source    []byte
 	Thermo    thermo.Files
+	Jacobian  jacobian.Files
 	FeedIDs   []string
 	Variables int
 }
@@ -93,15 +99,19 @@ func Generate(cfg contractv1.CompilerInput) (Files, error) {
 		Stages: col.Stages, Components: len(cfg.Components), Variables: col.Stages*block + 1,
 		Pressure: strconv.FormatFloat(col.Pressure.ValuePa, 'g', -1, 64), Feeds: feeds,
 	}
+	derivatives, err := jacobian.Generate(data.Variables)
+	if err != nil {
+		return Files{}, fmt.Errorf("mesh: %w", err)
+	}
 	header, err := render("lumo_mesh.h", headerTemplate, data)
 	if err != nil {
 		return Files{}, err
 	}
-	source, err := render("lumo_mesh.c", sourceTemplate, data)
+	source, err := render("lumo_mesh.c", sourceTemplate+jacobianTemplate, data)
 	if err != nil {
 		return Files{}, err
 	}
-	return Files{Header: header, Source: source, Thermo: properties, FeedIDs: ids, Variables: data.Variables}, nil
+	return Files{Header: header, Source: source, Thermo: properties, Jacobian: derivatives, FeedIDs: ids, Variables: data.Variables}, nil
 }
 
 func render(name, source string, data templateData) ([]byte, error) {

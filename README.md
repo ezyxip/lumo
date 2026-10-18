@@ -22,7 +22,8 @@ Lumo эксплуатирует заранее известную структу
 - **Уровень 1 — компилятор:** `compiler_input.json` (компоненты, число ступеней, топология, давление) → сгенерированная модель. Меняет размерность и связность MESH-системы, требует перегенерации.
 - **Уровень 2 — модель:** `model_input.json` (питание `F, z, q`, спеки продукта `R, D`, начальное приближение) → `model_output.json` (профили `T, x, y, L, V` по ступеням, продукты `D, W, Qd, Qw`, диагностика сходимости).
 
-Новый контракт данных — [v1](examples/v1/README.md): [JSON-схемы](examples/schema/v1/), [Go-типы](contracts/v1/types.go) и пример входов. Пока это спецификация и типы; пакет `topology` читает прежний формат из [examples/README.md](examples/README.md).
+Новый контракт данных — [v1](examples/v1/README.md): [JSON-схемы](examples/schema/v1/), [Go-типы](contracts/v1/types.go) и пример входов. Парсеры и валидаторы обоих входных файлов находятся в [contracts/v1](contracts/v1/README.md)
+Пакет `topology` сохраняет чтение прежнего формата из [examples/README.md](examples/README.md) и не используется генераторами
 
 ## MESH-постановка
 
@@ -65,6 +66,7 @@ uv run pytest -q
 ## Структура репозитория
 
 - `codegen/mesh/` — генератор C99 для функции невязок колонны
+- `codegen/jacobian/` вычисляет якобиан по переданной функции невязки
 - `codegen/thermo/` — генератор C99 для Antoine + Raoult и идеальных энтальпий
 - `contracts/v1/` — Go-типы нового контракта входов и результатов
 - `topology/` — парсер и валидатор прежнего формата
@@ -88,3 +90,5 @@ uv run pytest -q
 - [doc/v0.issues.md](doc/v0.issues.md) — декомпозиция V0 на задачи
 - [examples/README.md](examples/README.md) — форматы входа/выхода компилятора и модели
 - [classic-solver/README.md](classic-solver/README.md) — reference-солвер
+
+Описание интерфейса якобиана в [codegen/jacobian/README.md](codegen/jacobian/README.md)

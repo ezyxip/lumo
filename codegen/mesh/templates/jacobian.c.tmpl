@@ -1,0 +1,33 @@
+
+/* Adapt the model to the independent Jacobian callback/status contract. */
+static int mesh_residual_for_jacobian(const double *state, const void *context,
+                                      double *residual) {
+    int status = lumo_mesh_residual(state, context, residual);
+    switch (status) {
+    case LUMO_MESH_OK: return LUMO_JACOBIAN_OK;
+    case LUMO_MESH_INVALID_INPUT: return LUMO_JACOBIAN_INVALID_INPUT;
+    case LUMO_MESH_TEMPERATURE_RANGE: return LUMO_JACOBIAN_DOMAIN_ERROR;
+    default: return LUMO_JACOBIAN_NUMERIC_ERROR;
+    }
+}
+
+int lumo_mesh_jacobian_numeric(const double *state,
+                               const struct lumo_mesh_operating *operating,
+                               const void *context, double *jacobian) {
+    const struct lumo_mesh_numeric_options *options = context;
+    struct lumo_jacobian_numeric_options numeric = {0.0, NULL};
+    int status;
+    if (operating == NULL) return LUMO_MESH_INVALID_INPUT;
+    if (options != NULL) {
+        numeric.relative_step = options->relative_step;
+        numeric.variable_scales = options->variable_scales;
+    }
+    status = lumo_jacobian_numeric(state, mesh_residual_for_jacobian, operating,
+                                   &numeric, jacobian);
+    switch (status) {
+    case LUMO_JACOBIAN_OK: return LUMO_MESH_OK;
+    case LUMO_JACOBIAN_INVALID_INPUT: return LUMO_MESH_INVALID_INPUT;
+    case LUMO_JACOBIAN_DOMAIN_ERROR: return LUMO_MESH_TEMPERATURE_RANGE;
+    default: return LUMO_MESH_NUMERIC_ERROR;
+    }
+}

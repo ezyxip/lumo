@@ -18,7 +18,7 @@ func TestNonlinearReference(t *testing.T) {
 		t.Fatal(err)
 	}
 	var testcase struct {
-		CompilerInput contractv1.CompilerInput `json:"compiler_input"`
+		CompilerInput json.RawMessage `json:"compiler_input"`
 	}
 	if err := json.Unmarshal(input, &testcase); err != nil {
 		t.Fatal(err)
@@ -44,7 +44,14 @@ func TestNonlinearReference(t *testing.T) {
 	if fmt.Sprintf("%x", sha256.Sum256(input)) != reference.InputSHA256 {
 		t.Fatal("stale reference: run python codegen/mesh/testdata/nonlinear/reference.py")
 	}
-	files, err := Generate(testcase.CompilerInput)
+	cfg, err := contractv1.ParseCompilerInput(bytes.NewReader(testcase.CompilerInput))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := contractv1.ValidateCompilerInput(cfg); err != nil {
+		t.Fatal(err)
+	}
+	files, err := Generate(cfg)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,10 +72,11 @@ func TestNonlinearReference(t *testing.T) {
 	}
 	program := ctest.Build(t, map[string][]byte{
 		"lumo_mesh.h": files.Header, "lumo_mesh.c": files.Source,
+		"lumo_jacobian.h": files.Jacobian.Header, "lumo_jacobian.c": files.Jacobian.Source,
 		"lumo_thermo.h": files.Thermo.Header, "lumo_thermo.c": files.Thermo.Source,
 		"reference.h": header.Bytes(), "check.c": harness,
 	})
-	for _, name := range []string{"reference_residual", "temperature_dependence", "jacobian_rank", "newton_reference"} {
+	for _, name := range []string{"reference_residual", "temperature_dependence", "jacobian_values", "jacobian_limits", "jacobian_errors", "jacobian_rank", "newton_reference"} {
 		t.Run(name, func(t *testing.T) { program.Run(t, name) })
 	}
 }

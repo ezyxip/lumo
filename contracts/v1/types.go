@@ -2,9 +2,9 @@
 // model. These are wire types, not a solver or a property database.
 //
 // The structural rules live in examples/schema/v1. Cross-file and physical
-// validation rules are specified in examples/v1/README.md. Decoding into these
-// types alone does not validate an input. The legacy topology.Parse API does
-// not accept this format.
+// validation rules are specified in examples/v1/README.md. ParseCompilerInput
+// and ParseModelInput check JSON structure; ValidateCompilerInput and
+// ValidateModelInput check semantics. Decoding into types alone is not validation.
 package contractv1
 
 const SchemaVersion = 1

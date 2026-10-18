@@ -30,7 +30,7 @@ static int evaluate(const double *u, double *r) {
     return LUMO_MESH_OK;
 }
 
-static int jacobian(const double *u, double matrix[N][N]) {
+static int reference_jacobian(const double *u, double matrix[N][N]) {
     size_t i, k;
     for (k = 0; k < N; ++k) {
         double plus[N], minus[N], rp[N], rm[N];
@@ -47,6 +47,101 @@ static int jacobian(const double *u, double matrix[N][N]) {
         for (i = 0; i < N; ++i) matrix[i][k] = (rp[i] - rm[i]) / (2.0 * step);
     }
     return LUMO_MESH_OK;
+}
+
+/* Same solver-facing signature for every derivative backend. */
+static lumo_mesh_jacobian_fn selected_jacobian = lumo_mesh_jacobian_numeric;
+
+static int jacobian(const double *u, double matrix[N][N]) {
+    double state[N], raw[N*N], scales[N];
+    struct lumo_mesh_numeric_options options = {0.0, scales};
+    size_t row, col;
+    int status;
+    for (col = 0; col < N; ++col) {
+        scales[col] = column_scale(col);
+        state[col] = u[col] * scales[col];
+    }
+    status = selected_jacobian(state, &reference_operating, &options, raw);
+    if (status != LUMO_MESH_OK) return status;
+    for (row = 0; row < N; ++row) for (col = 0; col < N; ++col) {
+        matrix[row][col] = raw[row*N+col] * scales[col] / row_scale(row);
+    }
+    return LUMO_MESH_OK;
+}
+
+static int jacobian_values(void) {
+    double u[N], actual[N][N], expected[N][N], raw[N*N];
+    size_t row, col, trial;
+    for (trial = 0; trial < 2; ++trial) {
+        for (col = 0; col < N; ++col) u[col] = reference_state[col] / column_scale(col) + (trial ? 0.001 : 0.0);
+        CTEST_STATUS(jacobian(u, actual), LUMO_MESH_OK);
+        CTEST_STATUS(reference_jacobian(u, expected), LUMO_MESH_OK);
+        for (row = 0; row < N; ++row) for (col = 0; col < N; ++col) {
+            CTEST_STATUS(fabs(actual[row][col] - expected[row][col]) < 2e-7 * fmax(1.0, fabs(expected[row][col])), 1);
+        }
+    }
+    CTEST_STATUS(selected_jacobian(reference_state, &reference_operating, NULL, raw), LUMO_MESH_OK);
+    /* Exact derivatives independently known from boundary/closure equations. */
+    CTEST_NEAR(raw[LUMO_MESH_CLOSURE*N + LUMO_MESH_L], 1.0);
+    CTEST_NEAR(raw[LUMO_MESH_H*N + LUMO_MESH_QD], -1.0);
+    CTEST_NEAR(raw[((LUMO_MESH_STAGES-1)*LUMO_MESH_BLOCK+LUMO_MESH_H)*N + LUMO_MESH_QW], 1.0);
+    CTEST_NEAR(raw[LUMO_MESH_SX*N + LUMO_MESH_X], 1.0);
+    CTEST_NEAR(raw[LUMO_MESH_CLOSURE*N + LUMO_MESH_QW], 0.0);
+    return 0;
+}
+
+static int jacobian_limits(void) {
+    double state[N], raw[N*N], r[N], shifted[N], derivative[N];
+    const double limits[] = {350.0, 390.0};
+    size_t i, trial;
+    for (trial = 0; trial < 2; ++trial) {
+        double h = trial == 0 ? 0.01 : -0.01;
+        memcpy(state, reference_state, sizeof state);
+        state[LUMO_MESH_T] = limits[trial];
+        memcpy(shifted, state, sizeof shifted);
+        shifted[LUMO_MESH_T] += h;
+        CTEST_STATUS(selected_jacobian(state, &reference_operating, NULL, raw), LUMO_MESH_OK);
+        CTEST_STATUS(lumo_mesh_residual(state, &reference_operating, r), LUMO_MESH_OK);
+        CTEST_STATUS(lumo_mesh_residual(shifted, &reference_operating, derivative), LUMO_MESH_OK);
+        for (i = 0; i < N; ++i) {
+            double expected = (derivative[i] - r[i]) / h;
+            double error = fabs(raw[i*N+LUMO_MESH_T] - expected) / row_scale(i);
+            CTEST_STATUS(error < 1e-5, 1);
+        }
+        CTEST_NEAR(state[LUMO_MESH_T], limits[trial]);
+    }
+    return 0;
+}
+
+static int jacobian_errors(void) {
+    double raw[N*N], state[N], scales[N];
+    struct lumo_mesh_numeric_options options = {0.0, scales};
+    size_t i;
+    memcpy(state, reference_state, sizeof state);
+    for (i = 0; i < N; ++i) scales[i] = column_scale(i);
+    CTEST_STATUS(selected_jacobian(NULL, &reference_operating, NULL, raw), LUMO_MESH_INVALID_INPUT);
+    CTEST_STATUS(selected_jacobian(state, NULL, NULL, raw), LUMO_MESH_INVALID_INPUT);
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, NULL, NULL), LUMO_MESH_INVALID_INPUT);
+    options.relative_step = -1.0;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, &options, raw), LUMO_MESH_INVALID_INPUT);
+    options.relative_step = NAN;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, &options, raw), LUMO_MESH_INVALID_INPUT);
+    options.relative_step = 0.0;
+    scales[0] = 0.0;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, &options, raw), LUMO_MESH_INVALID_INPUT);
+    scales[0] = INFINITY;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, &options, raw), LUMO_MESH_INVALID_INPUT);
+    options.variable_scales = NULL;
+    options.relative_step = 1e-300;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, &options, raw), LUMO_MESH_NUMERIC_ERROR);
+    options.relative_step = 0.2;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, &options, raw), LUMO_MESH_TEMPERATURE_RANGE);
+    CTEST_STATUS(memcmp(state, reference_state, sizeof state), 0);
+    state[LUMO_MESH_T] = 349.0;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, NULL, raw), LUMO_MESH_TEMPERATURE_RANGE);
+    state[LUMO_MESH_T] = NAN;
+    CTEST_STATUS(selected_jacobian(state, &reference_operating, NULL, raw), LUMO_MESH_INVALID_INPUT);
+    return 0;
 }
 
 /* Complete-pivot elimination of the scaled Jacobian. A pivot is significant
@@ -182,7 +277,8 @@ static int newton_reference(void) {
 int main(int argc, char **argv) {
     const struct ctest_case cases[] = {
         {"reference_residual", reference_residual}, {"temperature_dependence", temperature_dependence},
-        {"jacobian_rank", jacobian_rank}, {"newton_reference", newton_reference}
+        {"jacobian_values", jacobian_values}, {"jacobian_limits", jacobian_limits},
+        {"jacobian_errors", jacobian_errors}, {"jacobian_rank", jacobian_rank}, {"newton_reference", newton_reference}
     };
     return ctest_run(argc, argv, cases, sizeof cases / sizeof cases[0]);
 }

@@ -60,4 +60,31 @@ struct lumo_mesh_operating {
 int lumo_mesh_residual(const double *state,
                        const struct lumo_mesh_operating *operating,
                        double *residual);
+/* All Jacobian backends share this signature and the unscaled layout
+ * J[row * LUMO_MESH_SIZE + col] = d residual[row] / d state[col].
+ * Operating parameters are held fixed. Context is backend-specific, read-only.
+ * Output contains SIZE*SIZE doubles and must not overlap inputs/context.
+ * On error output may be partially written and must be discarded.
+ */
+typedef int (*lumo_mesh_jacobian_fn)(const double *state,
+                                    const struct lumo_mesh_operating *operating,
+                                    const void *context, double *jacobian);
+
+struct lumo_mesh_numeric_options {
+    /* Zero selects cbrt(DBL_EPSILON). Otherwise finite and positive. */
+    double relative_step;
+    /* Optional SIZE finite positive characteristic scales in state units.
+     * Used only to select steps; the returned Jacobian remains unscaled.
+     * NULL selects 1 for every variable.
+     */
+    const double *variable_scales;
+};
+
+/* Context is NULL for defaults or points to lumo_mesh_numeric_options.
+ * Central differences; one-sided differences at thermo temperature limits.
+ * Additional scratch space is O(SIZE) on the stack.
+ */
+int lumo_mesh_jacobian_numeric(const double *state,
+                               const struct lumo_mesh_operating *operating,
+                               const void *context, double *jacobian);
 #endif

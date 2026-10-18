@@ -64,6 +64,7 @@ func TestGenerateAndRunC99(t *testing.T) {
 				t.Fatal(err)
 			}
 			if !bytes.Equal(files.Header, again.Header) || !bytes.Equal(files.Source, again.Source) ||
+				!bytes.Equal(files.Jacobian.Header, again.Jacobian.Header) || !bytes.Equal(files.Jacobian.Source, again.Jacobian.Source) ||
 				!bytes.Equal(files.Thermo.Header, again.Thermo.Header) || !bytes.Equal(files.Thermo.Source, again.Thermo.Source) {
 				t.Fatal("generation is not deterministic")
 			}
@@ -81,6 +82,7 @@ func TestGenerateAndRunC99(t *testing.T) {
 			}
 			program := ctest.Build(t, map[string][]byte{
 				"lumo_mesh.h": files.Header, "lumo_mesh.c": files.Source,
+				"lumo_jacobian.h": files.Jacobian.Header, "lumo_jacobian.c": files.Jacobian.Source,
 				"lumo_thermo.h": files.Thermo.Header, "lumo_thermo.c": files.Thermo.Source,
 				"check.c": harness,
 			})
