@@ -66,6 +66,7 @@ uv run pytest -q
 ## Структура репозитория
 
 - `codegen/mesh/` — генератор C99 для функции невязок колонны
+- `codegen/prepare/` подготовка питания и режима для MESH на C99
 - `codegen/jacobian/` вычисляет якобиан по переданной функции невязки
 - `codegen/thermo/` — генератор C99 для Antoine + Raoult и идеальных энтальпий
 - `contracts/v1/` — Go-типы нового контракта входов и результатов
@@ -92,3 +93,5 @@ uv run pytest -q
 - [classic-solver/README.md](classic-solver/README.md) — reference-солвер
 
 Описание интерфейса якобиана в [codegen/jacobian/README.md](codegen/jacobian/README.md)
+
+Подготовка питания описана в [codegen/prepare/README.md](codegen/prepare/README.md)

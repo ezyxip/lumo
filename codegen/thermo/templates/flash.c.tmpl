@@ -1,0 +1,167 @@
+
+/* Rachford-Rice for ideal, composition-independent K values. */
+#define LUMO_FLASH_RESIDUAL_TOL 1e-13
+#define LUMO_FLASH_PHASE_TOL 1e-12
+static int lumo_flash_rr(const double *z, const double *k, double beta,
+                          double *value) {
+    long double sum = 0.0L;
+    size_t i;
+    for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) {
+        long double denominator = (1.0L-beta) + (long double)beta*k[i];
+        if (z[i] == 0.0) continue;
+        if (!isfinite(denominator) || denominator <= 0.0) return LUMO_THERMO_NUMERIC_ERROR;
+        sum += ((long double)z[i]*((long double)k[i]-1.0L))/denominator;
+    }
+    if (!isfinite(sum) || fabsl(sum) > DBL_MAX) return LUMO_THERMO_NUMERIC_ERROR;
+    *value = (double)sum;
+    return LUMO_THERMO_OK;
+}
+
+int lumo_thermo_flash(enum lumo_feed_state type, double value,
+                       double pressure_Pa, const double *composition,
+                       struct lumo_flash_result *result) {
+    struct lumo_flash_result candidate;
+    double z[LUMO_THERMO_COMPONENTS], k[LUMO_THERMO_COMPONENTS];
+    double e[LUMO_THERMO_COMPONENTS], sum = 0.0, hl, hv, beta, temperature;
+    double low = 0.0, high = HUGE_VAL;
+    size_t i;
+    int status, iteration = 0;
+    if (composition == NULL || result == NULL || !isfinite(pressure_Pa) || pressure_Pa <= 0.0) {
+        return LUMO_THERMO_INVALID_INPUT;
+    }
+    for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) {
+        if (!isfinite(composition[i]) || composition[i] < 0.0 || composition[i] > 1.0) return LUMO_THERMO_INVALID_INPUT;
+        sum += composition[i];
+        low = fmax(low, lumo_properties[i].min_K);
+        high = fmin(high, lumo_properties[i].max_K);
+    }
+    if (!isfinite(sum) || fabs(sum-1.0) > 1e-10) return LUMO_THERMO_INVALID_INPUT;
+    for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) z[i] = composition[i]/sum;
+    if (type == LUMO_FEED_TEMPERATURE) {
+        double f0, f1;
+        temperature = value;
+        status = lumo_equilibrium_constants(temperature, pressure_Pa, k);
+        if (status != LUMO_THERMO_OK) return status;
+        status = lumo_flash_rr(z, k, 0.0, &f0);
+        if (status != LUMO_THERMO_OK) return status;
+        status = lumo_flash_rr(z, k, 1.0, &f1);
+        if (status != LUMO_THERMO_OK) return status;
+        /* Small RR sums can be caused by cancellation for distinct K.
+         * Ambiguity requires every present K to be numerically unit-valued.
+         * The conservative error estimate accounts for cancellation in the
+         * Antoine exponent and its conversion through pow(10, exponent).
+         */
+        {
+            int unresolved = 1;
+            for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) {
+                const struct lumo_component_properties *p = &lumo_properties[i];
+                double q = p->b/(p->c + (temperature-273.15));
+                double tolerance = 64.0*DBL_EPSILON*2.302585092994046*
+                    (1.0 + fabs(p->a) + fabs(q));
+                if (z[i] > 0.0 && fabs(k[i]-1.0) > tolerance) unresolved = 0;
+            }
+            if (unresolved) return LUMO_THERMO_FLASH_AMBIGUOUS;
+        }
+        if (f0 <= 0.0) beta = 0.0;
+        else if (f1 >= 0.0) beta = 1.0;
+        else {
+            double left = 0.0, right = 1.0;
+            for (iteration = 0; iteration < 128; ++iteration) {
+                double f;
+                beta = left + (right-left)*0.5;
+                status = lumo_flash_rr(z, k, beta, &f);
+                if (status != LUMO_THERMO_OK) return status;
+                /* Both conditions matter: small RR alone does not locate
+                 * beta accurately for nearly equal K; a small absolute beta
+                 * interval alone does not normalize a vanishing phase.
+                 */
+                if (f == 0.0 || (fabs(f) <= LUMO_FLASH_RESIDUAL_TOL &&
+                    right-left <= 1e-12*fmin(beta,1.0-beta) +
+                        4.0*DBL_EPSILON*fmax(fabs(left),fabs(right)))) break;
+                if (beta == left || beta == right) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+                if (f > 0.0) left = beta; else right = beta;
+            }
+            if (iteration == 128) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+        }
+    } else if (type == LUMO_FEED_SATURATED_LIQUID || type == LUMO_FEED_VAPOR_FRACTION) {
+        double f_low, f_high;
+        beta = type == LUMO_FEED_SATURATED_LIQUID ? 0.0 : value;
+        if (!isfinite(beta) || beta < 0.0 || beta > 1.0) return LUMO_THERMO_INVALID_INPUT;
+        /* Monotone Psat(T) makes the temperature root unambiguous. */
+        for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) {
+            if (z[i] > 0.0 && lumo_properties[i].b <= 0.0) return LUMO_THERMO_INVALID_INPUT;
+        }
+        status = lumo_equilibrium_constants(low, pressure_Pa, k);
+        if (status != LUMO_THERMO_OK) return status;
+        status = lumo_flash_rr(z, k, beta, &f_low);
+        if (status != LUMO_THERMO_OK) return status;
+        status = lumo_equilibrium_constants(high, pressure_Pa, k);
+        if (status != LUMO_THERMO_OK) return status;
+        status = lumo_flash_rr(z, k, beta, &f_high);
+        if (status != LUMO_THERMO_OK) return status;
+        if (f_low > LUMO_FLASH_RESIDUAL_TOL || f_high < -LUMO_FLASH_RESIDUAL_TOL) return LUMO_THERMO_TEMPERATURE_RANGE;
+        temperature = low;
+        if (fabs(f_low) <= LUMO_FLASH_RESIDUAL_TOL) temperature = low;
+        else if (fabs(f_high) <= LUMO_FLASH_RESIDUAL_TOL) temperature = high;
+        else {
+            for (iteration = 0; iteration < 128; ++iteration) {
+                double f;
+                temperature = low + (high-low)*0.5;
+                status = lumo_equilibrium_constants(temperature, pressure_Pa, k);
+                if (status != LUMO_THERMO_OK) return status;
+                status = lumo_flash_rr(z, k, beta, &f);
+                if (status != LUMO_THERMO_OK) return status;
+                if (fabs(f) <= LUMO_FLASH_RESIDUAL_TOL && high-low < 1e-11) break;
+                if (temperature == low || temperature == high) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+                if (f < 0.0) low = temperature; else high = temperature;
+            }
+        }
+        if (iteration == 128) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+        status = lumo_equilibrium_constants(temperature, pressure_Pa, k);
+        if (status != LUMO_THERMO_OK) return status;
+    } else return LUMO_THERMO_INVALID_INPUT;
+
+    for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) {
+        double denominator = (1.0-beta) + beta*k[i];
+        candidate.x[i] = z[i]/denominator;
+        candidate.y[i] = z[i]*(k[i]/denominator);
+    }
+    /* At single-phase TP points only the present phase is physically used.
+     * Normalize the incipient phase for a well-defined diagnostic composition.
+     */
+    if (type == LUMO_FEED_TEMPERATURE && (beta == 0.0 || beta == 1.0)) {
+        double *absent = beta == 0.0 ? candidate.y : candidate.x;
+        sum = 0.0;
+        for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) sum += absent[i];
+        if (!isfinite(sum) || sum <= 0.0) return LUMO_THERMO_NUMERIC_ERROR;
+        for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) absent[i] /= sum;
+    }
+    /* Never report OK with unnormalized phases or violated component balances.
+     * Do not repair these by normalizing: that would change the equilibrium.
+     */
+    {
+        double sx = 0.0, sy = 0.0;
+        for (i = 0; i < LUMO_THERMO_COMPONENTS; ++i) {
+            double balance = (1.0-beta)*candidate.x[i] + beta*candidate.y[i];
+            if (!isfinite(candidate.x[i]) || !isfinite(candidate.y[i]) ||
+                candidate.x[i] < 0.0 || candidate.y[i] < 0.0) return LUMO_THERMO_NUMERIC_ERROR;
+            sx += candidate.x[i]; sy += candidate.y[i];
+            if (fabs(balance-z[i]) > LUMO_FLASH_PHASE_TOL) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+        }
+        if (fabs(sx-1.0) > LUMO_FLASH_PHASE_TOL || fabs(sy-1.0) > LUMO_FLASH_PHASE_TOL) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+        if (!(type == LUMO_FEED_TEMPERATURE && (beta == 0.0 || beta == 1.0))) {
+            double f;
+            status = lumo_flash_rr(z,k,beta,&f);
+            if (status != LUMO_THERMO_OK) return status;
+            if (fabs(f) > LUMO_FLASH_RESIDUAL_TOL) return LUMO_THERMO_FLASH_NO_CONVERGENCE;
+        }
+    }
+    status = lumo_thermo_eval(temperature, pressure_Pa, candidate.x, candidate.y, e, &hl, &hv);
+    if (status != LUMO_THERMO_OK) return status;
+    candidate.temperature_K = temperature;
+    candidate.vapor_fraction = beta;
+    candidate.enthalpy_J_mol = (1.0-beta)*hl + beta*hv;
+    if (!isfinite(candidate.enthalpy_J_mol)) return LUMO_THERMO_NUMERIC_ERROR;
+    *result = candidate;
+    return LUMO_THERMO_OK;
+}

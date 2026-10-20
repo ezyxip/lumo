@@ -8,7 +8,9 @@ enum lumo_thermo_status {
     LUMO_THERMO_OK = 0,
     LUMO_THERMO_INVALID_INPUT = 1,
     LUMO_THERMO_TEMPERATURE_RANGE = 2,
-    LUMO_THERMO_NUMERIC_ERROR = 3
+    LUMO_THERMO_NUMERIC_ERROR = 3,
+    LUMO_THERMO_FLASH_AMBIGUOUS = 4,
+    LUMO_THERMO_FLASH_NO_CONVERGENCE = 5
 };
 
 /* x, y and equilibrium_residuals each have LUMO_THERMO_COMPONENTS entries.
@@ -28,4 +30,30 @@ int lumo_thermo_eval(
     double *h_vapor
 );
 
+enum lumo_feed_state {
+    LUMO_FEED_SATURATED_LIQUID = 0,
+    LUMO_FEED_TEMPERATURE = 1,
+    LUMO_FEED_VAPOR_FRACTION = 2
+};
+
+struct lumo_flash_result {
+    double temperature_K;
+    double vapor_fraction;
+    double x[LUMO_THERMO_COMPONENTS];
+    double y[LUMO_THERMO_COMPONENTS];
+    double enthalpy_J_mol;
+};
+
+/* value is T [K], molar vapor fraction, or ignored for saturated liquid.
+ * Normalized composition is molar, at the specified pressure.
+ * Temperature solves require positive Antoine B for present components.
+ * Outside the common property interval returns TEMPERATURE_RANGE.
+ * A TP state with all present K numerically equal to 1 returns FLASH_AMBIGUOUS.
+ * Unresolved convergence or failed phase normalization returns FLASH_NO_CONVERGENCE.
+ * At single-phase TP points the absent phase is a normalized diagnostic,
+ * not an equilibrium output stream. On error result is unchanged.
+ */
+int lumo_thermo_flash(enum lumo_feed_state type, double value,
+                       double pressure_Pa, const double *composition,
+                       struct lumo_flash_result *result);
 #endif

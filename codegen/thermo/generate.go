@@ -19,6 +19,9 @@ var headerTemplate string
 //go:embed templates/antoine_raoult.c.tmpl
 var sourceTemplate string
 
+//go:embed templates/flash.c.tmpl
+var flashTemplate string
+
 // Files contains a standalone module. Write Header as lumo_thermo.h and Source
 // as lumo_thermo.c in the same directory. Link with the standard math library.
 // Array indices in the C interface follow ComponentIDs, in input order.
@@ -50,7 +53,7 @@ func Generate(cfg contractv1.CompilerInput) (Files, error) {
 	if err != nil {
 		return Files{}, err
 	}
-	source, err := render("thermo.c", sourceTemplate, funcs, data)
+	source, err := render("thermo.c", sourceTemplate+flashTemplate, funcs, data)
 	if err != nil {
 		return Files{}, err
 	}
