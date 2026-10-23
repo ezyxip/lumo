@@ -66,6 +66,7 @@ uv run pytest -q
 ## Структура репозитория
 
 - `codegen/mesh/` — генератор C99 для функции невязок колонны
+- `codegen/solver/` солвер Ньютона для MESH на C99
 - `codegen/initialguess/` стартовые профили состояния MESH на C99
 - `codegen/prepare/` подготовка питания и режима для MESH на C99
 - `codegen/jacobian/` вычисляет якобиан по переданной функции невязки
@@ -98,3 +99,5 @@ uv run pytest -q
 Подготовка питания описана в [codegen/prepare/README.md](codegen/prepare/README.md)
 
 Начальное приближение описано в [codegen/initialguess/README.md](codegen/initialguess/README.md)
+
+Солвер описан в [codegen/solver/README.md](codegen/solver/README.md)
