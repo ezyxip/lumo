@@ -3,6 +3,10 @@
 #include "ctest.h"
 #include "reference.h"
 
+#ifdef LUMO_TEST_INITIALGUESS
+#include "lumo_initialguess.h"
+#endif
+
 #define N LUMO_MESH_SIZE
 
 static double column_scale(size_t i) {
@@ -196,7 +200,15 @@ static int jacobian_rank(void) {
         char name[80];
         (void)snprintf(name, sizeof name, "jacobian_rank perturbation=%g", perturbations[trial]);
         ctest_set_name(name);
+#ifdef LUMO_TEST_INITIALGUESS
+        {
+            double initial[N];
+            CTEST_STATUS(lumo_initialguess_linear_T_x(&reference_operating, initial), LUMO_THERMO_OK);
+            for (i = 0; i < N; ++i) u[i] = initial[i] / column_scale(i) + (trial ? (i % 2 ? 1 : -1) * perturbations[trial] : 0.0);
+        }
+#else
         for (i = 0; i < N; ++i) u[i] = reference_state[i] / column_scale(i) + (i % 2 ? 1 : -1) * perturbations[trial];
+#endif
         CTEST_STATUS(jacobian(u, a), LUMO_MESH_OK);
         CTEST_STATUS(matrix_rank(a), N);
     }
@@ -242,7 +254,15 @@ static int newton_reference(void) {
         int iteration;
         (void)snprintf(name, sizeof name, "newton_reference trial=%lu", (unsigned long)trial);
         ctest_set_name(name);
+#ifdef LUMO_TEST_INITIALGUESS
+        {
+            double initial[N];
+            CTEST_STATUS(lumo_initialguess_linear_T_x(&reference_operating, initial), LUMO_THERMO_OK);
+            for (i = 0; i < N; ++i) u[i] = initial[i] / column_scale(i) + (trial ? (i % 2 ? 1 : -1) * perturbations[trial] : 0.0);
+        }
+#else
         for (i = 0; i < N; ++i) u[i] = reference_state[i] / column_scale(i) + (i % 2 ? 1 : -1) * perturbations[trial];
+#endif
         for (iteration = 0; iteration < 20; ++iteration) {
             double a[N][N], rhs[N], delta[N], step;
             int accepted = 0;
