@@ -12,8 +12,42 @@ enum lumo_solver_status {
     LUMO_SOLVER_LINE_SEARCH_FAILED,
     LUMO_SOLVER_MAX_ITERATIONS,
     LUMO_SOLVER_NUMERIC_ERROR,
-    LUMO_SOLVER_ALLOCATION_FAILED
+    LUMO_SOLVER_INVALID_WORKSPACE
 };
+
+/* Element count, not bytes. Check workspace_doubles() for target-size overflow
+ * when generating exceptionally large systems. No runtime allocation required.
+ */
+#define LUMO_SOLVER_WORKSPACE_DOUBLES ((size_t)LUMO_MESH_SIZE * ((size_t)LUMO_MESH_SIZE + 7))
+
+/* Required number of doubles; zero if the byte size cannot fit size_t. */
+size_t lumo_solver_workspace_doubles(void);
+
+#define LUMO_SOLVER_HAS_DIAGNOSTICS {{if .Diagnostics}}1{{else}}0{{end}}
+
+enum lumo_solver_event {
+    LUMO_SOLVER_INITIAL = 0,
+    LUMO_SOLVER_ITERATION = 1
+};
+
+struct lumo_solver_iteration {
+    enum lumo_solver_event event;
+    int iteration; /* zero for initial, then consecutive accepted-step numbers */
+    double residual_norm; /* scaled infinity norm */
+    double step_norm; /* infinity norm of accepted change / variable scales */
+    double step_length; /* accepted alpha, zero for initial */
+    size_t rejected_trials; /* before this accepted step; zero for initial */
+    size_t total_rejected_trials;
+    size_t worst_residual_index; /* zero-based MESH row; first wins ties */
+    double worst_residual_value; /* signed residual / row scale */
+};
+
+/* Called synchronously. Record is valid only during this call; copy to retain.
+ * Context belongs to the caller. Do not mutate solver inputs/state/workspace.
+ * No terminal/failure event; completion is communicated by the required report.
+ */
+typedef void (*lumo_solver_observer)(const struct lumo_solver_iteration *record,
+                                     void *context);
 
 struct lumo_solver_options {
     int max_iterations; /* default 100; zero only checks the initial state */
@@ -23,8 +57,8 @@ struct lumo_solver_options {
     const double *residual_scales; /* optional SIZE positive finite values */
     lumo_mesh_jacobian_fn jacobian; /* NULL selects scaled numerical differences */
     const void *jacobian_context; /* read-only; requires an explicit callback */
-    double *residual_history; /* optional caller buffer; initial + accepted norms */
-    size_t history_capacity;
+    lumo_solver_observer observer; /* NULL skips preparing all optional records */
+    void *observer_context; /* ignored with NULL; both ignored if HAS_DIAGNOSTICS=0 */
 };
 
 struct lumo_solver_report {
@@ -34,7 +68,6 @@ struct lumo_solver_report {
     size_t backtracks; /* total rejected trials */
     double residual_norm; /* final accepted scaled norm; NAN if unavailable */
     double step_norm; /* last accepted scaled infinity step norm */
-    size_t history_count; /* entries written; buffer may truncate history */
 };
 
 /* Fill before overriding options. NULL options in solve selects these defaults. */
@@ -46,11 +79,16 @@ void lumo_solver_default_options(struct lumo_solver_options *options);
  * Scaling is fixed for the entire solve. No clipping/normalization of iterates.
  * Composition bounds allow 1e-12 roundoff; flow bounds allow 1e-12*total_feed.
  * Temperature-domain errors in trial points trigger backtracking.
- * Dense workspace O(SIZE^2) is allocated/freed per call, no global mutable state.
- * report is required. State, report, options, history and scale arrays must not
- * overlap each other or operating inputs. Custom callbacks must not mutate inputs.
+ * Caller supplies at least workspace_doubles() doubles in workspace.
+ * No initialization is required. Contents are unspecified after the call.
+ * The buffer can be reused across sequential calls; concurrent calls need
+ * separate buffers. NULL/undersized workspace returns INVALID_WORKSPACE.
+ * No heap allocation and no global mutable state in the generated modules.
+ * report is required. State, report, options, observer storage and scale arrays must not
+ * overlap each other, workspace or operating inputs. Custom callbacks must not mutate inputs.
  */
 int lumo_solver_solve(const struct lumo_mesh_operating *operating,
                        double *state, const struct lumo_solver_options *options,
+                       double *workspace, size_t workspace_doubles,
                        struct lumo_solver_report *report);
 #endif

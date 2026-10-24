@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"testing"
 
 	"github.com/ezyxip/lumo/codegen/initialguess"
@@ -84,7 +85,7 @@ func TestSolverC99(t *testing.T) {
 	files := sourceFiles(t, c, h)
 	files["reference.h"] = header.Bytes()
 	p := ctest.Build(t, files)
-	for _, name := range []string{"reference", "already_converged", "limits", "callbacks", "errors", "scales", "history", "operating_variants"} {
+	for _, name := range []string{"reference", "already_converged", "limits", "callbacks", "errors", "scales", "operating_variants", "workspace_contract"} {
 		t.Run(name, func(t *testing.T) { p.Run(t, name) })
 	}
 }
@@ -130,12 +131,13 @@ func TestSingularColumn(t *testing.T) {
 	}
 	h := []byte(`#include "lumo_solver.h"
 #include "ctest.h"
+static double workspace[LUMO_SOLVER_WORKSPACE_DOUBLES];
 static int singular_column(void){
  const struct lumo_mesh_operating op={.feeds={{100,{0.5,0.5},2000}},.distillate_mol_s=50,.reflux_ratio=2.5};
  double state[LUMO_MESH_SIZE]={0},before[LUMO_MESH_SIZE];struct lumo_solver_report report;size_t j;
  for(j=0;j<LUMO_MESH_STAGES;++j){size_t b=j*LUMO_MESH_BLOCK;state[b]=0.5;state[b+1]=0.5;state[b+2]=0.5;state[b+3]=0.5;state[b+LUMO_MESH_T]=360;state[b+LUMO_MESH_L]=j==2?50:125;state[b+LUMO_MESH_V]=175;}
  memcpy(before,state,sizeof state);
- CTEST_STATUS(lumo_solver_solve(&op,state,NULL,&report),LUMO_SOLVER_SINGULAR_JACOBIAN);
+ CTEST_STATUS(lumo_solver_solve(&op,state,NULL,workspace,LUMO_SOLVER_WORKSPACE_DOUBLES,&report),LUMO_SOLVER_SINGULAR_JACOBIAN);
  CTEST_STATUS(report.iterations,0);CTEST_STATUS(memcmp(before,state,sizeof state),0);return 0;
 }
 int main(int argc,char **argv){const struct ctest_case cases[]={{"singular_column",singular_column}};return ctest_run(argc,argv,cases,1);}
@@ -169,4 +171,16 @@ int main(int argc,char **argv){const struct ctest_case cases[]={{"linear_referen
 	files["solver_under_test.inc"] = f.Source
 	p := ctest.Build(t, files)
 	p.Run(t, "linear_reference")
+}
+
+// A library build must remain free of heap-allocation calls in every generated
+// module, including preparation and initialization, not just the solver body.
+func TestGeneratedModulesHaveNoHeapCalls(t *testing.T) {
+	files := sourceFiles(t, config(t), nil)
+	allocator := regexp.MustCompile(`\b(malloc|calloc|realloc|free|aligned_alloc|posix_memalign|alloca|strdup|strndup|printf|fprintf|puts|fputs|fopen|fwrite|write)\s*\(`)
+	for name, data := range files {
+		if location := allocator.FindIndex(data); location != nil {
+			t.Errorf("%s contains an allocation or output call: %s", name, data[location[0]:location[1]])
+		}
+	}
 }

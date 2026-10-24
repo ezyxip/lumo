@@ -25,8 +25,20 @@ type Files struct {
 	Mesh   mesh.Files
 }
 
+// GenerationOptions controls optional code in the generated module.
+// These options do not belong to the physical compiler_input.json contract.
+type GenerationOptions struct {
+	Diagnostics bool
+}
+
 // Generate specializes the dense Newton solver for the column dimensions.
 func Generate(cfg contractv1.CompilerInput) (Files, error) {
+	return GenerateWithOptions(cfg, GenerationOptions{Diagnostics: true})
+}
+
+// GenerateWithOptions can omit observation code entirely for baseline builds.
+// C option/report layouts stay identical; HAS_DIAGNOSTICS advertises capability.
+func GenerateWithOptions(cfg contractv1.CompilerInput, options GenerationOptions) (Files, error) {
 	if err := contractv1.ValidateCompilerInput(cfg); err != nil {
 		return Files{}, fmt.Errorf("solver: %w", err)
 	}
@@ -40,7 +52,7 @@ func Generate(cfg contractv1.CompilerInput) (Files, error) {
 			return nil, fmt.Errorf("solver template %s: %w", name, err)
 		}
 		var out bytes.Buffer
-		if err := t.Execute(&out, cfg); err != nil {
+		if err := t.Execute(&out, options); err != nil {
 			return nil, fmt.Errorf("solver template %s: %w", name, err)
 		}
 		return out.Bytes(), nil
