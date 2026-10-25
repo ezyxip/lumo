@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Go and C99 checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.mod
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Prepare checks
+        run: |
+          mkdir -p build/tmp
+          go version
+          python3 --version
+          cc --version
+          make --version
+
+      - name: Run checks
+        env:
+          TMPDIR: ${{ github.workspace }}/build/tmp
+        run: make check
+
+      - name: Upload validation report
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: build/validation/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Upload failed C tests
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-c-tests
+          path: build/tmp/lumo-codegen-*/
+          if-no-files-found: ignore
+          retention-days: 7
