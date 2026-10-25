@@ -106,6 +106,8 @@ uv run pytest -q
 
 ## Документация
 
+[Независимый эталон 5×2](references/benzene_toluene_5x2/README.md) содержит входы, Python-расчёт, результаты и ссылки на материалы по постановке
+
 - [doc/scope.md](doc/scope.md) — концептуальная постановка задачи, минимальный скоуп и границы ответственности
 - [examples/v1/README.md](examples/v1/README.md) — новый контракт JSON v1 и правила его проверки
 - [codegen/thermo/README.md](codegen/thermo/README.md) — генерация термодинамики и общий интерфейс для MESH

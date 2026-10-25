@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "name": "benzene_toluene_5x2",
+  "components": [
+    {
+      "id": "benzene",
+      "name": "benzene",
+      "molar_mass_g_mol": 78.11,
+      "properties": {
+        "source": "inline",
+        "antoine": {
+          "A": 6.90565,
+          "B": 1211.033,
+          "C": 220.79,
+          "pressure_unit": "mmHg",
+          "temperature_unit": "C"
+        },
+        "enthalpy": {
+          "type": "constant_cp",
+          "reference_temperature_K": 350,
+          "liquid_cp_J_mol_K": 120,
+          "vapor_cp_J_mol_K": 90,
+          "vaporization_enthalpy_at_reference_J_mol": 30000
+        },
+        "temperature_range_K": {
+          "min": 350,
+          "max": 390
+        }
+      }
+    },
+    {
+      "id": "toluene",
+      "name": "toluene",
+      "molar_mass_g_mol": 92.14,
+      "properties": {
+        "source": "inline",
+        "antoine": {
+          "A": 6.95464,
+          "B": 1344.8,
+          "C": 219.48,
+          "pressure_unit": "mmHg",
+          "temperature_unit": "C"
+        },
+        "enthalpy": {
+          "type": "constant_cp",
+          "reference_temperature_K": 350,
+          "liquid_cp_J_mol_K": 150,
+          "vapor_cp_J_mol_K": 110,
+          "vaporization_enthalpy_at_reference_J_mol": 33000
+        },
+        "temperature_range_K": {
+          "min": 350,
+          "max": 390
+        }
+      }
+    }
+  ],
+  "thermo": {
+    "phase_equilibrium": "antoine_raoult",
+    "enthalpy": "ideal"
+  },
+  "column": {
+    "stages": 5,
+    "condenser": {
+      "type": "total"
+    },
+    "reboiler": {
+      "type": "equilibrium"
+    },
+    "pressure": {
+      "type": "constant",
+      "value_Pa": 101325
+    },
+    "feeds": [
+      {
+        "id": "main_feed",
+        "stage": 3
+      }
+    ]
+  }
+}
